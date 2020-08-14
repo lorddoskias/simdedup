@@ -196,7 +196,7 @@ static inline char fls64 (u_int64_t v)
 //   else
 //     return 0;
 // }
-// 
+//
 // static inline u_int
 // ffs64 (u_int64_t v)
 // {
@@ -208,7 +208,7 @@ static inline char fls64 (u_int64_t v)
 //   else
 //     return 0;
 // }
-// 
+//
 // #define ffs(v) (sizeof (v) > 4 ? ffs64 (v) : ffs32 (v))
 
 
@@ -219,10 +219,10 @@ static inline char fls64 (u_int64_t v)
 
 #define DEFAULT_WINDOW_SIZE 32
 
-/* Fingerprint value take from LBFS fingerprint.h. For detail on this, 
+/* Fingerprint value take from LBFS fingerprint.h. For detail on this,
  * refer to the original rabin fingerprint paper.
  */
-#define FINGERPRINT_PT 0xbfe6b8a5bf378d83LL	
+#define FINGERPRINT_PT 0xbfe6b8a5bf378d83LL
 
 static u_int64_t polymod (u_int64_t nh, u_int64_t nl, u_int64_t d);
 static void polymult (u_int64_t *php, u_int64_t *plp, u_int64_t x, u_int64_t y);
@@ -251,7 +251,7 @@ static u_int64_t polymod (u_int64_t nh, u_int64_t nl, u_int64_t d) {
 			}
 	}
 	for (i = 63; i >= k; i--)
-	{  
+	{
 		if (nl & INT64 (1) << i)
 			nl ^= d >> (63 - i);
 	}
@@ -287,9 +287,9 @@ static u_int64_t polymmult (u_int64_t x, u_int64_t y, u_int64_t d) {
     initialization.
  */
 
-static void calcT(RabinPoly *rp) { 
-    unsigned int i; 
-    int xshift = fls64 (rp->poly) - 1; 
+static void calcT(RabinPoly *rp) {
+    unsigned int i;
+    int xshift = fls64 (rp->poly) - 1;
     rp->shift = xshift - 8;
 
 	u_int64_t T1 = polymod (0, INT64 (1) << xshift, rp->poly);
@@ -312,7 +312,7 @@ static void calcT(RabinPoly *rp) {
    fingerprint.
  */
 
-static u_int64_t slide8(RabinPoly *rp, unsigned char m) { 
+static u_int64_t slide8(RabinPoly *rp, unsigned char m) {
     rp->circbuf_pos++;
 	if (rp->circbuf_pos >= rp->window_size) {
 		rp->circbuf_pos = 0;
@@ -322,54 +322,54 @@ static u_int64_t slide8(RabinPoly *rp, unsigned char m) {
 	return rp->fingerprint = append8 (rp, rp->fingerprint ^ rp->U[om], m);
 }
 
-static u_int64_t append8(RabinPoly *rp, u_int64_t p, unsigned char m) { 	
-	return ((p << 8) | m) ^ rp->T[p >> rp->shift]; 
+static u_int64_t append8(RabinPoly *rp, u_int64_t p, unsigned char m) {
+	return ((p << 8) | m) ^ rp->T[p >> rp->shift];
 }
 
 
 /*
- 
+
     rp_init() -- Initialize the RabinPoly structure
-  
+
     Call this first to create a state container to be passed to the
     other library functions.  You'll later need to free all of the
     memory associated with this container by passing it to
-    rp_free(). 
+    rp_free().
 
     Args:
     -----
 
     window_size
-                
+
         Rabin fingerprint window size in bytes.  Suitable values range
         from 32 to 128.
 
-    avg_block_size 
-                
+    avg_block_size
+
         Average block size in bytes
-  
-    min_block_size 
+
+    min_block_size
 
         Minimum block size in bytes
-  
-    max_block_size 
+
+    max_block_size
 
         Maximum block size in bytes
-  
+
 
     Return values:
     --------------
-  
-    rp 
+
+    rp
         Pointer to the RabinPoly structure we've allocated
-  
-    NULL 
+
+    NULL
         Either malloc or arg error XXX need better error codes
 
 */
 
 RabinPoly* rp_new(unsigned int window_size,
-						size_t avg_block_size, 
+						size_t avg_block_size,
 						size_t min_block_size,
 						size_t max_block_size,
                         size_t inbuf_size) {
@@ -428,7 +428,7 @@ void rp_free(RabinPoly *rp)
 	rp = NULL;
 }
 
-void rp_from_buffer(RabinPoly *rp, unsigned char *src, size_t size) { 
+void rp_from_buffer(RabinPoly *rp, unsigned char *src, size_t size) {
 	rp_from_stream(rp, NULL);
 	assert(size <= rp->inbuf_size);
 	memcpy(rp->inbuf, src, size);
@@ -445,7 +445,7 @@ void rp_from_file(RabinPoly *rp, const char *path) {
 	rp_from_stream(rp, stream);
 }
 
-void rp_from_stream(RabinPoly *rp, FILE *stream) { 
+void rp_from_stream(RabinPoly *rp, FILE *stream) {
     rp->stream = stream;
     rp->error = 0;
     rp->buffer_only = 0;
@@ -453,7 +453,7 @@ void rp_from_stream(RabinPoly *rp, FILE *stream) {
 	rp->block_size = 0;
 	rp->block_streampos = 0;
     rp->block_addr = rp->inbuf;
-	rp->fingerprint = 0; 
+	rp->fingerprint = 0;
 	rp->circbuf_pos = -1;
 	bzero ((char*) rp->circbuf, rp->window_size*sizeof (unsigned char));
 }
@@ -480,7 +480,7 @@ int rp_block_next(RabinPoly *rp) {
     rp->block_addr += rp->block_size;
 	rp->block_size = 0;
 
-    /* 
+    /*
      * Skip early part of each block -- there appears to be no reason
      * to checksum the first min_block_size-N bytes, because the
      * effect of those early bytes gets flushed out pretty quickly.
@@ -496,7 +496,7 @@ int rp_block_next(RabinPoly *rp) {
     */
     size_t skip = rp->min_block_size - 256;
     size_t data_remaining = rp->inbuf_data_size - (rp->block_addr - rp->inbuf);
-    if ((data_remaining > rp->min_block_size+1) && 
+    if ((data_remaining > rp->min_block_size+1) &&
             (rp->min_block_size > 512)) {
         rp->block_size += skip;
     }
@@ -524,7 +524,7 @@ int rp_block_next(RabinPoly *rp) {
 					/* use func_stream_read to refill buffer */
 					int size = rp->inbuf_size - rp->inbuf_data_size;
 					assert(size > 0);
-					count = rp->func_stream_read(rp, 
+					count = rp->func_stream_read(rp,
 							rp->inbuf + rp->inbuf_data_size, size);
 					if (!count) {
 						assert(rp->error);
@@ -541,7 +541,7 @@ int rp_block_next(RabinPoly *rp) {
 					return rp->error;
 				} else {
 					/* give final block to caller; caller should call
-					 * us again to get e.g. eof error 
+					 * us again to get e.g. eof error
 					 */
 					return 0;
 				}
@@ -552,20 +552,20 @@ int rp_block_next(RabinPoly *rp) {
         slide8(rp, rp->block_addr[rp->block_size]);
         rp->block_size++;
 
-        /* 
-         *  
+        /*
+         *
          * We compare the low-order fingerprint bits (LOFB) to
          * something other than zero in order to avoid generating
          * short blocks when scanning long strings of zeroes.
          * Mechiel Lukkien (mjl), while working on the Plan9 gsoc,
          * seemed to think that avg_block_size - 1 was a good value.
-         * 
-         * http://gsoc.cat-v.org/people/mjl/blog/2007/08/06/1_Rabin_fingerprints/ 
-         * 
+         *
+         * http://gsoc.cat-v.org/people/mjl/blog/2007/08/06/1_Rabin_fingerprints/
+         *
          * ...and since we're already using avg_block_size - 1 to set
          * the fingerprint mask itself, then simply comparing LOFB to
-         * the mask itself will do the right thing.  
-         *  
+         * the mask itself will do the right thing.
+         *
          */
         if ((rp->block_size == rp->max_block_size) ||
             ((rp->block_size >= rp->min_block_size) &&
@@ -578,24 +578,24 @@ int rp_block_next(RabinPoly *rp) {
 
 
 
-/* 
- 
-    rp_in() -- Input data into the rabinpoly algorithm 
+/*
+
+    rp_in() -- Input data into the rabinpoly algorithm
 
     See rp_out() synopsis.
 
     Args:
     -----
 
-    rp       
+    rp
 
         Pointer to the RabinPoly structure from rp_init.
 
-    buf      
+    buf
 
         Pointer to input string buffer.
 
-    size    
+    size
 
         Max number of bytes we're supposed to read from buf.  This
         might be less than buffer size, e.g. if caller is using a
@@ -615,14 +615,14 @@ int rp_block_next(RabinPoly *rp) {
 
         All is well.
 
-    -1 
+    -1
 
         Invalid argument.
-  
+
  */
 
-/* 
- 
+/*
+
     rp_out() -- Generate output from the rabinpoly algorithm
 
 
@@ -647,7 +647,7 @@ int rp_block_next(RabinPoly *rp) {
 				break
 
     Each call to rp_out() returns a boolean indicating whether or
-    not we have processed all the bytes in our input buffer. 
+    not we have processed all the bytes in our input buffer.
 
     When we find a block boundary, then we return 1.  We set
     rp->block_done to 1, and rp->block_size to the total block length
@@ -671,7 +671,7 @@ int rp_block_next(RabinPoly *rp) {
     Args:
     -----
 
-    rp       
+    rp
 
         Pointer to the RabinPoly structure from rp_init.
 
@@ -684,22 +684,22 @@ int rp_block_next(RabinPoly *rp) {
 	RP_IN
 
 		Caller must load rp->inbuf with new input data by calling
-		rp_in(), then call rp_out() again.  
+		rp_in(), then call rp_out() again.
 
 	RP_PROCESS_FRAGMENT
 
 		Caller must process the current fragment (e.g. update block
-		hash), then call rp_out() again.  
+		hash), then call rp_out() again.
 
 	RP_PROCESS_BLOCK
 
 		Caller must process the completed block (e.g. finalize block
 		hash and do something with it), then call rp_out()
-		again.  
+		again.
 
 	RP_RESET
 
 		End of stream.  Caller should clean up (close files etc.) and
 		must not call rp_out() again without a rp_reset() first.
-			
+
  */
