@@ -247,11 +247,9 @@ static u_int64_t append8(RabinPoly *rp, u_int64_t p, unsigned char m) {
 
 */
 
-RabinPoly* rp_new(unsigned int window_size,
-						size_t avg_block_size,
-						size_t min_block_size,
-						size_t max_block_size,
-                        size_t inbuf_size) {
+RabinPoly* rp_new(unsigned int window_size, size_t avg_block_size,
+		  size_t min_block_size, size_t max_block_size,
+		  size_t inbuf_size, u_int64_t poly) {
 	RabinPoly *rp;
 
 	if (!min_block_size || !avg_block_size || !max_block_size ||
@@ -267,7 +265,7 @@ RabinPoly* rp_new(unsigned int window_size,
 		return NULL;
 	}
 
-	rp->poly = FINGERPRINT_PT;
+	rp->poly = poly;
 	rp->window_size = window_size;
 	rp->inbuf_size = inbuf_size;
 	rp->avg_block_size = avg_block_size;

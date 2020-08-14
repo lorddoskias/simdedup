@@ -1,4 +1,4 @@
-/* 
+/*
  * Copyright (C) 2014 Steve Traugott (stevegt@t7a.org)
  * Copyright (C) 2013 Pavan Kumar Alampalli (pavankumar@cmu.edu)
  * Copyright (C) 2004 Hyang-Ah Kim (hakim@cs.cmu.edu)
@@ -26,7 +26,7 @@
  */
 
 #ifndef _RABINPOLY_H_
-#define _RABINPOLY_H_ 
+#define _RABINPOLY_H_
 
 #include <stdio.h>
 #include <sys/types.h>
@@ -38,9 +38,9 @@ typedef struct RabinPoly {
 	size_t min_block_size;	    // in bytes
 	size_t max_block_size;	    // in bytes
 
-	size_t block_streampos;	    // block start position in input stream 
-	unsigned char * block_addr;	// starting address of current block 
-	size_t block_size;	        // size of the current block 
+	size_t block_streampos;	    // block start position in input stream
+	unsigned char * block_addr;	// starting address of current block
+	size_t block_size;	        // size of the current block
 
 	unsigned char *inbuf;  		// input buffer
 	size_t inbuf_pos;    	    // current position in input buffer
@@ -64,11 +64,9 @@ typedef struct RabinPoly {
 
 } RabinPoly;
 
-extern RabinPoly *rp_new(unsigned int window_size,
-						size_t avg_block_size, 
-						size_t min_block_size,
-						size_t max_block_size,
-                        size_t inbuf_size);
+extern RabinPoly *rp_new(unsigned int window_size, size_t avg_block_size,
+			 size_t min_block_size, size_t max_block_size,
+			 size_t inbuf_size, u_int64_t poly);
 extern void rp_from_buffer(RabinPoly *rp, unsigned char *src, size_t size);
 extern void rp_from_file(RabinPoly *rp, const char *path);
 extern void rp_from_stream(RabinPoly *rp, FILE *);
