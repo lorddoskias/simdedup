@@ -183,6 +183,7 @@ static void calcT(RabinPoly *rp) {
 
 	for (i = 0; i < 256; i++) {
 		rp->U[i] = polymmult (i, sizeshift, rp->poly);
+		//printf("U[%u] = 0x%lx\n", i, rp->U[i]);
 	}
 }
 
@@ -260,7 +261,7 @@ RabinPoly* rp_new(unsigned int window_size, size_t avg_block_size,
 		return NULL;
 	}
 
-	rp = (RabinPoly *)malloc(sizeof(RabinPoly));
+	rp = malloc(sizeof(RabinPoly));
 	if (!rp) {
 		return NULL;
 	}
@@ -371,7 +372,7 @@ int rp_block_next(RabinPoly *rp) {
      * right: https://moinakg.wordpress.com/tag/rolling-hash/
      *
     */
-    size_t skip = rp->min_block_size - 256;
+    size_t skip = rp->min_block_size - rp->window_size;
     size_t data_remaining = rp->inbuf_data_size - (rp->block_addr - rp->inbuf);
     if ((data_remaining > rp->min_block_size+1) &&
             (rp->min_block_size > 512)) {
@@ -446,7 +447,7 @@ int rp_block_next(RabinPoly *rp) {
          */
         if ((rp->block_size == rp->max_block_size) ||
             ((rp->block_size >= rp->min_block_size) &&
-            ((rp->fingerprint & rp->fingerprint_mask) == rp->fingerprint_mask))) {
+            ((rp->fingerprint & rp->fingerprint_mask) == 0))) {
             /* full block or fingerprint boundary */
             return 0;
         }

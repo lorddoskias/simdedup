@@ -21,10 +21,6 @@
  *
  */
 
-/*
- * http://www.umich.edu/~eecs381/handouts/CHeaderFileGuidelines.pdf
- */
-
 #ifndef _RABINPOLY_H_
 #define _RABINPOLY_H_
 
@@ -32,36 +28,35 @@
 #include <sys/types.h>
 
 typedef struct RabinPoly {
-	u_int64_t poly;						// Actual polynomial
-	unsigned int window_size;			// in bytes
+	//Private config values
+	u_int64_t poly;		    // Actual polynomial
+	unsigned int window_size;   // in bytes
 	size_t avg_block_size;	    // in bytes
 	size_t min_block_size;	    // in bytes
 	size_t max_block_size;	    // in bytes
 
-	size_t block_streampos;	    // block start position in input stream
-	unsigned char * block_addr;	// starting address of current block
-	size_t block_size;	        // size of the current block
+	//PRIVATE
+	unsigned char *inbuf;	    // input buffer
+	size_t inbuf_size;	    // size of input buffer
+	size_t inbuf_data_size;     // size of valid data in input buffer
 
-	unsigned char *inbuf;  		// input buffer
-	size_t inbuf_pos;    	    // current position in input buffer
-	size_t inbuf_size;   	    // size of input buffer
-	size_t inbuf_data_size;   	// size of valid data in input buffer
-
-	u_int64_t fingerprint;		// current rabin fingerprint
-	u_int64_t fingerprint_mask;	// to check if we are at block boundary
+	u_int64_t fingerprint_mask; // to check if we are at block boundary
 
 	unsigned char *circbuf;	    // circular buffer of size 'window_size'
-	unsigned int circbuf_pos;	// current position in circular buffer
+	unsigned int circbuf_pos;   // current position in circular buffer
+	FILE *stream;		    // input stream
+	int error;		    // input stream errno
+	int buffer_only;	    // if set, read loaded buffer only; ignore stream
+	int shift;
+	u_int64_t T[256];	    // Lookup table for mod
+	u_int64_t U[256];	    // Lookup table for subtraction
+	size_t (*func_stream_read)(struct RabinPoly*, unsigned char *dst, size_t size);
 
-  	int shift;
-	u_int64_t T[256];			// Lookup table for mod
-	u_int64_t U[256];
-
-	FILE *stream; 				// input stream
-    size_t (*func_stream_read)(struct RabinPoly*, unsigned char *dst, size_t size);
-    int error; 					// input stream errno
-	int buffer_only; 			// if set, read loaded buffer only; ignore stream
-
+	//PUB
+	u_int64_t fingerprint;	    // current rabin fingerprint
+	size_t block_streampos;	    // block start position in input stream
+	unsigned char * block_addr; // starting address of current block
+	size_t block_size;	    // size of the current block
 } RabinPoly;
 
 extern RabinPoly *rp_new(unsigned int window_size, size_t avg_block_size,
