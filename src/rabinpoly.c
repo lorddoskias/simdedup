@@ -193,7 +193,7 @@ static void calcT(RabinPoly *rp) {
  */
 
 static u_int64_t slide8(RabinPoly *rp, unsigned char m) {
-    rp->circbuf_pos++;
+	rp->circbuf_pos++;
 	if (rp->circbuf_pos >= rp->window_size) {
 		rp->circbuf_pos = 0;
 	}
@@ -288,7 +288,6 @@ RabinPoly* rp_new(unsigned int window_size, size_t avg_block_size,
 	}
 
     rp_from_stream(rp, NULL);
-    rp->func_stream_read = rp_stream_read;
 
     calcT(rp);
 
@@ -311,8 +310,7 @@ void rp_from_buffer(RabinPoly *rp, unsigned char *src, size_t size) {
 	assert(size <= rp->inbuf_size);
 	memcpy(rp->inbuf, src, size);
 	rp->inbuf_data_size = size;
-    rp->func_stream_read = NULL;
-    rp->buffer_only = 1;
+	rp->buffer_only = 1;
 }
 
 void rp_from_file(RabinPoly *rp, const char *path) {
@@ -324,29 +322,29 @@ void rp_from_file(RabinPoly *rp, const char *path) {
 }
 
 void rp_from_stream(RabinPoly *rp, FILE *stream) {
-    rp->stream = stream;
-    rp->error = 0;
-    rp->buffer_only = 0;
-    rp->inbuf_data_size = 0;
+	rp->stream = stream;
+	rp->error = 0;
+	rp->buffer_only = 0;
+	rp->inbuf_data_size = 0;
 	rp->block_size = 0;
 	rp->block_streampos = 0;
-    rp->block_addr = rp->inbuf;
+	rp->block_addr = rp->inbuf;
 	rp->fingerprint = 0;
 	rp->circbuf_pos = -1;
 	bzero ((char*) rp->circbuf, rp->window_size*sizeof (unsigned char));
 }
 
-size_t rp_stream_read(RabinPoly *rp, unsigned char *dst, size_t size) {
-    size_t count = fread(dst, 1, size, rp->stream);
+static size_t rp_stream_read(RabinPoly *rp, unsigned char *dst, size_t size) {
+	size_t count = fread(dst, 1, size, rp->stream);
 	rp->error = 0;
-    if (count == 0) {
-        if (ferror(rp->stream)) {
-            rp->error = errno;
-        } else if (feof(rp->stream)) {
-            rp->error = EOF;
-        }
-    }
-    return count;
+	if (count == 0) {
+		if (ferror(rp->stream)) {
+			rp->error = errno;
+		} else if (feof(rp->stream)) {
+			rp->error = EOF;
+		}
+	}
+	return count;
 }
 
 #define CUR_ADDR rp->block_addr+rp->block_size
@@ -356,7 +354,7 @@ int rp_block_next(RabinPoly *rp) {
 
     rp->block_streampos += rp->block_size;
     rp->block_addr += rp->block_size;
-	rp->block_size = 0;
+    rp->block_size = 0;
 
     /*
      * Skip early part of each block -- there appears to be no reason
@@ -402,8 +400,8 @@ int rp_block_next(RabinPoly *rp) {
 					/* use func_stream_read to refill buffer */
 					int size = rp->inbuf_size - rp->inbuf_data_size;
 					assert(size > 0);
-					count = rp->func_stream_read(rp,
-							rp->inbuf + rp->inbuf_data_size, size);
+					count = rp_stream_read(rp,
+							       rp->inbuf + rp->inbuf_data_size, size);
 					if (!count) {
 						assert(rp->error);
 					}

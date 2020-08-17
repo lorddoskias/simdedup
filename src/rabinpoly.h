@@ -65,7 +65,6 @@ extern RabinPoly *rp_new(unsigned int window_size, size_t avg_block_size,
 extern void rp_from_buffer(RabinPoly *rp, unsigned char *src, size_t size);
 extern void rp_from_file(RabinPoly *rp, const char *path);
 extern void rp_from_stream(RabinPoly *rp, FILE *);
-extern size_t rp_stream_read(RabinPoly *rp, unsigned char *dst, size_t size);
 extern int rp_block_next(RabinPoly *rp);
 extern void rp_free(RabinPoly *rp);
 
