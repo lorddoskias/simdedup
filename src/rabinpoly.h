@@ -67,6 +67,7 @@ extern void rp_from_file(RabinPoly *rp, const char *path);
 extern void rp_from_stream(RabinPoly *rp, FILE *);
 extern int rp_block_next(RabinPoly *rp);
 extern void rp_free(RabinPoly *rp);
+extern int calc_rabin(RabinPoly *rp);
 
 #endif /* !_RABINPOLY_H_ */
 

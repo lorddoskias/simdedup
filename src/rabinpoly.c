@@ -350,6 +350,64 @@ static size_t rp_stream_read(RabinPoly *rp, unsigned char *dst, size_t size) {
 #define CUR_ADDR rp->block_addr+rp->block_size
 #define INBUF_END rp->inbuf+rp->inbuf_size
 
+int calc_rabin(RabinPoly *rp)
+{
+    rp->block_streampos += rp->block_size;
+    rp->block_addr += rp->block_size;
+    rp->block_size = 0;
+
+    if (CUR_ADDR == INBUF_END) {
+	    /* end of input buffer: there's a partial block at the end
+	     * of the buffer; move it to the beginning of the buffer
+	     * so we can append more from input stream
+	     */
+	    memmove(rp->inbuf, rp->block_addr, rp->block_size);
+	    rp->block_addr = rp->inbuf;
+	    rp->inbuf_data_size = rp->block_size;
+    }
+
+    if (CUR_ADDR == rp->inbuf + rp->inbuf_data_size) {
+	    /* no more valid data in input buffer */
+	    int count = 0;
+	    if (!rp->error) {
+		    if (rp->buffer_only) {
+			    /* don't refill buffer */
+			    rp->error = EOF;
+		    } else {
+			    /* use func_stream_read to refill buffer */
+			    int size = rp->inbuf_size - rp->inbuf_data_size;
+			    assert(size > 0);
+			    count = rp_stream_read(rp,
+						   rp->inbuf + rp->inbuf_data_size, size);
+			    if (!count) {
+				    assert(rp->error);
+			    }
+			    rp->inbuf_data_size += count;
+		    }
+	    }
+	    if (rp->error && (count == 0)) {
+		    /* we're either carrying an error from earlier, or the
+		     * func_stream_read above just threw one
+		     */
+		    if (rp->block_size == 0) {
+			    /* we're done. caller shouldn't call us again */
+			    return rp->error;
+		    } else {
+			    /* give final block to caller; caller should call
+			     * us again to get e.g. eof error
+			     */
+			    return 0;
+		    }
+	    }
+    }
+
+    /* feed the next byte into rabinpoly algo */
+    slide8(rp, rp->block_addr[rp->block_size]);
+    rp->block_size++;
+
+    return 0;
+}
+
 int rp_block_next(RabinPoly *rp) {
 
     rp->block_streampos += rp->block_size;
