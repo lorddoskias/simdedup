@@ -252,7 +252,7 @@ RabinPoly* rp_new(unsigned int window_size, size_t avg_block_size,
 		  size_t min_block_size, size_t max_block_size,
 		  size_t inbuf_size, u_int64_t poly) {
 	RabinPoly *rp;
-
+#if 0
 	if (!min_block_size || !avg_block_size || !max_block_size ||
 		(min_block_size > avg_block_size) ||
 		(max_block_size < avg_block_size) ||
@@ -260,6 +260,7 @@ RabinPoly* rp_new(unsigned int window_size, size_t avg_block_size,
 		(window_size < DEFAULT_WINDOW_SIZE)) {
 		return NULL;
 	}
+#endif
 
 	rp = malloc(sizeof(RabinPoly));
 	if (!rp) {
