@@ -10,21 +10,29 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <time.h>
 #include "src/rabinpoly.h"
 
 
+#define SZ_8M (8*1024*1024)
 #define SZ_16M (16*1024*1024)
-#define NUM_HASHES ((2<<24) - 512)
+#define BUFSIZE SZ_8M
+#define NUM_HASHES ((1<<23) - 512)
 #define M_OFFSET 8
+#define CHUNK_SIZE SZ_8M
 
+
+clock_t overall_begin, overall_end;
+clock_t read_elapsed, hash_elapsed;
 
 static char path[PATH_MAX] = {0,};
 static char *pathp = path;
 
 struct chunk_hash {
 	uint64_t unit_hashes[4];
-	unsigned int off;
+	loff_t  off;
 	int fd;
+	char filename[PATH_MAX];
 
 };
 
@@ -48,24 +56,35 @@ int find_largest(uint64_t *numbers)
 	return found_index;
 }
 
-int hash_chunk(int fd, int chunk_off)
+int hash_chunk(int fd, loff_t chunk_off, char *filename)
 {
-	// no need to alloc 16m on every iter
-	static char filebuf[SZ_16M];
+	static char filebuf[CHUNK_SIZE];
 	static uint64_t chunk_hashlist[NUM_HASHES];
 	int i = 0;
 	int rc = 0;
 	int idx;
 	struct chunk_hash *chunk = &hashes[stor_index++];
-	RabinPoly *rp = rp_new(512,SZ_16M,SZ_16M,SZ_16M, SZ_16M, 0x3f63dfbf84af3b);
-	ssize_t	count = read(fd, filebuf, SZ_16M);
-	if (count != SZ_16M) {
-		printf("Short chunk - skipping: %ld\n", count);
+	clock_t begin, end;
+	ssize_t count;
+
+	RabinPoly *rp = rp_new(512,BUFSIZE,BUFSIZE,BUFSIZE,BUFSIZE, 0x3f63dfbf84af3b);
+	begin = clock();
+	count = read(fd, filebuf, CHUNK_SIZE);
+	end = clock();
+
+	if (count != CHUNK_SIZE) {
+		if (count)
+			printf("Short chunk - skipping: %ld\n", count);
+		stor_index--;
 		return 1;
 	}
 
-	rp_from_buffer(rp, filebuf, SZ_16M);
+	read_elapsed += end - begin;
 
+	rp_from_buffer(rp, filebuf, BUFSIZE);
+	strcpy(chunk->filename, filename);
+
+	begin = clock();
 	// calculate first 512 bytes this fills our sliding window
 	for (i = 0; i < 512; i++)
 		calc_rabin(rp);
@@ -78,6 +97,7 @@ int hash_chunk(int fd, int chunk_off)
 	while ((rc = calc_rabin(rp)) != EOF)
 		chunk_hashlist[i++] = rp->fingerprint;
 
+
 	// This finds the indexes and shifts them by
 	// M_OFFSET
 	for (int c = 0; c < 4; c++) {
@@ -86,15 +106,22 @@ int hash_chunk(int fd, int chunk_off)
 		chunk->unit_hashes[c] = chunk_hashlist[hash_index];
 	}
 	chunk->off = chunk_off;
+	end = clock();
 
+	hash_elapsed += end - begin;
+
+#if 0
+	// since we use M_OFFSET we can't be sure we have the largest
+	// hashes
 	assert(chunk->unit_hashes[0] > chunk->unit_hashes[1] &&
 	       chunk->unit_hashes[1] > chunk->unit_hashes[2] &&
 	       chunk->unit_hashes[2] > chunk->unit_hashes[3]);
+#endif
 
 	//Prep for next iteration
 	rp_free(rp);
 	memset(chunk_hashlist, sizeof(uint64_t)*NUM_HASHES, 0);
-	memset(filebuf, SZ_16M, 0);
+	memset(filebuf, BUFSIZE, 0);
 
 	return 0;
 }
@@ -142,8 +169,9 @@ static int get_dirent_type(struct dirent *entry, int fd)
 int hash_file(char *filename)
 {
 	char abspath[PATH_MAX];
-	int chunk_off = 0;
+	loff_t chunk_off = 0;
 	int ret = 0;
+	double elapsed, hash_time, read_time;
 
 	if (realpath(filename, abspath) == NULL) {
 		printf("Error %d: %s while getting path to file %s\n",
@@ -157,12 +185,25 @@ int hash_file(char *filename)
 		return 1;
 	}
 
-	while (!ret) {
-		ret = hash_chunk(fd, chunk_off);
-		chunk_off += SZ_16M;
-	}
+	//prep measurement
+	hash_elapsed = read_elapsed = 0;
 
+	overall_begin = clock();
+	while (!ret) {
+		ret = hash_chunk(fd, chunk_off, filename);
+		if (!ret)
+			chunk_off += CHUNK_SIZE;
+	}
+	overall_end = clock();
+	elapsed = (double)(overall_end - overall_begin) / CLOCKS_PER_SEC;
 	close(fd);
+
+	printf("Hashed %lu mb in %f seconds(throughput: %f mb/s). Hash time: %f read time: %f\n",
+	       chunk_off / 1024 / 1024,
+	       elapsed, (chunk_off / elapsed)/1024/1024,
+	       (double)hash_elapsed/CLOCKS_PER_SEC, (double)read_elapsed/CLOCKS_PER_SEC);
+
+	return 0;
 }
 
 
@@ -233,11 +274,24 @@ int main(int arg, char **argv)
 	int ret;
 
 	/* 1k chunks can be hashed, enough for testing */
-	hashes = calloc(1000, sizeof(struct chunk_hash));
+	hashes = calloc(5000, sizeof(struct chunk_hash));
 	if (hashes == NULL) {
 		printf("Error allocating memory");
 		exit(1);
 	}
 
-	return walk_dir(argv[1]);
+	ret = walk_dir(argv[1]);
+	if (ret < 0) {
+		printf("Error hashing files in dir\n");
+		exit(1);
+	}
+#if 0
+	for (int i = 0; i < stor_index; i++) {
+		struct chunk_hash *chunk = &hashes[i];
+		printf("CHUNK[%d/%s]: id1: %lu id2: %lu id3: %lu  id4: %lu\n",
+		       i, chunk->filename, chunk->unit_hashes[0], chunk->unit_hashes[1],
+		       chunk->unit_hashes[2], chunk->unit_hashes[3]);
+	}
+#endif
+
 }
