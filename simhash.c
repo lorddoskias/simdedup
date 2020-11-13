@@ -137,10 +137,9 @@ int find_largest(uint64_t *numbers)
 int hash_chunk(int fd, loff_t chunk_off, char *filename)
 {
 	static char filebuf[CHUNK_SIZE];
-	static uint64_t chunk_hashlist[NUM_HASHES];
+	static struct max_array hash_list = {};
 	int i = 0;
 	int rc = 0;
-	int idx;
 	struct chunk_hash *chunk = &hashes[stor_index++];
 	clock_t begin, end;
 	ssize_t count;
@@ -166,40 +165,28 @@ int hash_chunk(int fd, loff_t chunk_off, char *filename)
 	// calculate first 512 bytes this fills our sliding window
 	for (i = 0; i < 512; i++)
 		calc_rabin(rp);
-	i = 0;
-
-	//save first hash
-	chunk_hashlist[i++] = rp->fingerprint;
 
 	// calculate every Ji'th hash sum and store it
 	while ((rc = calc_rabin(rp)) != EOF)
-		chunk_hashlist[i++] = rp->fingerprint;
+		insert_hash(&hash_list, rp->fingerprint);
 
 
 	// This finds the indexes and shifts them by
 	// M_OFFSET
 	for (int c = 0; c < 4; c++) {
-		int hash_index = find_largest(chunk_hashlist) + M_OFFSET;
-		assert(hash_index < i);
-		chunk->unit_hashes[c] = chunk_hashlist[hash_index];
+		int hash_index = hash_list.max_hashes[c].index + M_OFFSET;
+		assert(hash_index < hash_list.i);
+		chunk->unit_hashes[c] = hash_list.chunk_hashlist[hash_index];
 	}
 	chunk->off = chunk_off;
 	end = clock();
 
 	hash_elapsed += end - begin;
 
-#if 0
-	// since we use M_OFFSET we can't be sure we have the largest
-	// hashes
-	assert(chunk->unit_hashes[0] > chunk->unit_hashes[1] &&
-	       chunk->unit_hashes[1] > chunk->unit_hashes[2] &&
-	       chunk->unit_hashes[2] > chunk->unit_hashes[3]);
-#endif
-
 	//Prep for next iteration
 	rp_free(rp);
-	memset(chunk_hashlist, sizeof(uint64_t)*NUM_HASHES, 0);
-	memset(filebuf, BUFSIZE, 0);
+	memset(&hash_list,0, sizeof(struct max_array));
+	memset(filebuf, 0, BUFSIZE);
 
 	return 0;
 }
@@ -249,7 +236,7 @@ int hash_file(char *filename)
 	char abspath[PATH_MAX];
 	loff_t chunk_off = 0;
 	int ret = 0;
-	double elapsed, hash_time, read_time;
+	double elapsed;
 
 	if (realpath(filename, abspath) == NULL) {
 		printf("Error %d: %s while getting path to file %s\n",
@@ -348,7 +335,6 @@ out:
 
 int main(int arg, char **argv)
 {
-	size_t chunk_off = 0;
 	int ret;
 
 	/* 1k chunks can be hashed, enough for testing */
