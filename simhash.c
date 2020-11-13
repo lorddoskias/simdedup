@@ -36,8 +36,86 @@ struct chunk_hash {
 
 };
 
+struct max_array {
+	// top 4 hashes
+	uint8_t size;
+	struct max_hash {
+		int index;
+		uint64_t hash;
+	} max_hashes[4];
+
+	uint64_t chunk_hashlist[NUM_HASHES];
+	int i;
+};
+
 static int stor_index = 0;
 struct chunk_hash *hashes;
+
+#define parent(i) (i-1)/2
+#define left(i)	  (i*2+1)
+#define right(i)  (i*2+2)
+
+static void swap(struct max_hash *h1, struct max_hash *h2)
+{
+	struct max_hash temp = *h1;
+	*h1 = *h2;
+	*h2 = temp;
+}
+
+void min_heapify(struct max_array *ctx, int i)
+{
+	int left_idx = left(i);
+	int right_idx = right(i);
+	int smallest = i;
+	if (left_idx < ctx->size && ctx->max_hashes[left_idx].hash < ctx->max_hashes[i].hash)
+		smallest = left_idx;
+	if (right_idx < ctx->size && ctx->max_hashes[right_idx].hash < ctx->max_hashes[smallest].hash)
+		smallest = right_idx;
+	if (smallest != i) {
+		swap(&ctx->max_hashes[i], &ctx->max_hashes[smallest]);
+		min_heapify(ctx, smallest);
+
+	}
+}
+
+static void pop_heap(struct max_array *ctx)
+{
+	ctx->max_hashes[0] = ctx->max_hashes[--ctx->size];
+	assert(ctx->size >= 0 && ctx->size <= 3);
+	min_heapify(ctx, 0);
+}
+
+static void add_heap(struct max_array *ctx, int i, uint64_t hash)
+{
+	int k = ctx->size++;
+	assert(k>= 0 && k<=3);
+	// insert at the end
+	ctx->max_hashes[k].hash = hash;
+	ctx->max_hashes[k].index = i;
+
+	while (k != 0 && ctx->max_hashes[parent(k)].hash > ctx->max_hashes[k].hash) {
+		swap(&ctx->max_hashes[k], &ctx->max_hashes[parent(k)]);
+		k = parent(k);
+	}
+
+}
+
+static void insert_hash(struct max_array *ctx, uint64_t hash)
+{
+	int idx = ctx->i++;
+	assert(idx < NUM_HASHES);
+
+	ctx->chunk_hashlist[idx] = hash;
+	if (ctx->size < 4) {
+		add_heap(ctx, idx, hash);
+	} else {
+		if (ctx->max_hashes[0].hash < hash) {
+			pop_heap(ctx);
+			add_heap(ctx, idx, hash);
+		}
+	}
+}
+
 
 int find_largest(uint64_t *numbers)
 {
