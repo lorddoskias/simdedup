@@ -112,9 +112,14 @@ static void insert_hash(struct max_array *ctx, uint64_t hash)
 			pop_heap(ctx);
 			add_heap(ctx, idx, hash);
 		} else {
-			for (int i = 0; i < 4; i++)
-				if (idx == ctx->max_hashes[i].index + M_OFFSET)
-					ctx->max_hashes[i].offset_hash = hash;
+			if (idx == ctx->max_hashes[0].index + M_OFFSET)
+				ctx->max_hashes[0].offset_hash = hash;
+			else if (idx == ctx->max_hashes[1].index + M_OFFSET)
+				ctx->max_hashes[1].offset_hash = hash;
+			else if (idx == ctx->max_hashes[2].index + M_OFFSET)
+				ctx->max_hashes[2].offset_hash = hash;
+			else if (idx == ctx->max_hashes[3].index + M_OFFSET)
+				ctx->max_hashes[3].offset_hash = hash;
 		}
 	}
 }
