@@ -185,8 +185,8 @@ int hash_chunk(int fd, loff_t chunk_off, char *filename)
 
 	//Prep for next iteration
 	rp_free(rp);
-	memset(&hash_list,0, sizeof(struct max_array));
-	memset(filebuf, 0, BUFSIZE);
+	hash_list.i = 0;
+	hash_list.size = 0;
 
 	return 0;
 }
