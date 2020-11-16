@@ -38,14 +38,13 @@ struct chunk_hash {
 
 struct max_array {
 	// top 4 hashes
+	int i;
 	uint8_t size;
 	struct max_hash {
 		int index;
 		uint64_t hash;
+		uint64_t offset_hash;
 	} max_hashes[4];
-
-	uint64_t chunk_hashlist[NUM_HASHES];
-	int i;
 };
 
 static int stor_index = 0;
@@ -92,6 +91,7 @@ static void add_heap(struct max_array *ctx, int i, uint64_t hash)
 	// insert at the end
 	ctx->max_hashes[k].hash = hash;
 	ctx->max_hashes[k].index = i;
+	ctx->max_hashes[k].offset_hash = 0;
 
 	while (k != 0 && ctx->max_hashes[parent(k)].hash > ctx->max_hashes[k].hash) {
 		swap(&ctx->max_hashes[k], &ctx->max_hashes[parent(k)]);
@@ -105,13 +105,16 @@ static void insert_hash(struct max_array *ctx, uint64_t hash)
 	int idx = ctx->i++;
 	assert(idx < NUM_HASHES);
 
-	ctx->chunk_hashlist[idx] = hash;
 	if (ctx->size < 4) {
 		add_heap(ctx, idx, hash);
 	} else {
 		if (ctx->max_hashes[0].hash < hash) {
 			pop_heap(ctx);
 			add_heap(ctx, idx, hash);
+		} else {
+			for (int i = 0; i < 4; i++)
+				if (idx == ctx->max_hashes[i].index + M_OFFSET)
+					ctx->max_hashes[i].offset_hash = hash;
 		}
 	}
 }
@@ -173,11 +176,8 @@ int hash_chunk(int fd, loff_t chunk_off, char *filename)
 
 	// This finds the indexes and shifts them by
 	// M_OFFSET
-	for (int c = 0; c < 4; c++) {
-		int hash_index = hash_list.max_hashes[c].index + M_OFFSET;
-		assert(hash_index < hash_list.i);
-		chunk->unit_hashes[c] = hash_list.chunk_hashlist[hash_index];
-	}
+	for (int c = 0; c < 4; c++)
+		chunk->unit_hashes[c] = hash_list.max_hashes[c].offset_hash;
 	chunk->off = chunk_off;
 	end = clock();
 
